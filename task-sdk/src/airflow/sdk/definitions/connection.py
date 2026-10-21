@@ -29,6 +29,8 @@ from airflow.sdk.exceptions import AirflowException, AirflowNotFoundException, A
 from airflow.sdk.providers_manager_runtime import ProvidersManagerTaskRuntime
 
 log = logging.getLogger(__name__)
+PORT_MIN = 0
+PORT_MAX = 65535
 
 
 def _parse_netloc_to_hostname(uri_parts):
@@ -118,10 +120,21 @@ class Connection:
     schema: str | None = None
     login: str | None = None
     password: str | None = None
-    port: int | None = None
+    port: int | None = attrs.field(default=None)
     extra: str | None = None
 
     EXTRA_KEY = "__extra__"
+
+    @port.validator
+    def _validate_port(self, _, port: int | None) -> None:
+        if port is None:
+            return
+        if type(port) is not int:
+            raise ValueError(f"Expected integer value for `port`, but got {port!r} instead.")
+        if not PORT_MIN <= port <= PORT_MAX:
+            raise ValueError(
+                f"Expected value for `port` in the range {PORT_MIN}-{PORT_MAX}, but got {port!r} instead."
+            )
 
     @overload
     def __init__(self, *, conn_id: str, uri: str) -> None: ...

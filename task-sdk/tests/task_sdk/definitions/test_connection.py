@@ -170,6 +170,29 @@ class TestConnections:
         assert parsed_uri.port == 3306
         assert parsed_uri.path.lstrip("/") == "test_schema"
 
+    @pytest.mark.parametrize("port", [0, 65535, None])
+    def test_allows_valid_port_boundaries(self, port):
+        conn = Connection(conn_id="test-port", conn_type="http", port=port)
+        assert conn.port == port
+
+    @pytest.mark.parametrize("port", [-1, 65536])
+    def test_rejects_out_of_range_port_values(self, port):
+        with pytest.raises(ValueError, match="port"):
+            Connection(conn_id="test-port", conn_type="http", port=port)
+
+    @pytest.mark.parametrize("port", [1.5, "123"])
+    def test_rejects_non_integer_port_values(self, port):
+        with pytest.raises(ValueError, match="port"):
+            Connection(conn_id="test-port", conn_type="http", port=port)
+
+    def test_rejects_invalid_port_assignment(self):
+        conn = Connection(conn_id="test-port", conn_type="http", port=5432)
+
+        with pytest.raises(ValueError, match="port"):
+            conn.port = 65536
+
+        assert conn.port == 5432
+
     def test_conn_get(self, mock_supervisor_comms):
         conn_result = ConnectionResult(
             conn_id="mysql_conn",
